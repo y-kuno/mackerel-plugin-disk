@@ -3,7 +3,6 @@ setup:
 		github.com/Songmu/goxz/cmd/goxz \
 		github.com/tcnksm/ghr \
 		golang.org/x/lint/golint
-	go get -d -t ./...
 
 test: setup
 	go test -v ./...
