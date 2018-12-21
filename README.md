@@ -1,6 +1,6 @@
 # mackerel-plugin-disk
 
-[![Build Status](https://travis-ci.org/y-kuno/mackerel-plugin-disk.svg?branch=master)](https://travis-ci.org/y-kuno/mackerel-plugin-mesos)
+[![Build Status](https://travis-ci.org/y-kuno/mackerel-plugin-disk.svg?branch=master)](https://travis-ci.org/y-kuno/mackerel-plugin-disk)
 ![License](https://img.shields.io/github/license/y-kuno/mackerel-plugin-disk.svg)
 ![Release](https://img.shields.io/github/release/y-kuno/mackerel-plugin-disk.svg)
 
