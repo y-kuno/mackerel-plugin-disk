@@ -3,6 +3,7 @@ setup:
 		github.com/Songmu/goxz/cmd/goxz \
 		github.com/tcnksm/ghr \
 		golang.org/x/lint/golint
+	GO111MODULE=on
 
 test: setup
 	go test -v ./...
