@@ -59,16 +59,16 @@ func (p *DiskPlugin) MetricKeyPrefix() string {
 func (p *DiskPlugin) GraphDefinition() map[string]Graphs {
 	labelPrefix := strings.Title(p.MetricKeyPrefix())
 	return map[string]Graphs{
-		"disk.throughput.#": {
-			Label: fmt.Sprintf("%s Disk Throughput", labelPrefix),
+		"throughput.#": {
+			Label: fmt.Sprintf("%s Throughput", labelPrefix),
 			Unit:  mp.UnitBytesPerSecond,
 			Metrics: []Metrics{
 				{Name: "read", Label: "read", Diff: true, PerSecond: true},
 				{Name: "write", Label: "write", Diff: true, PerSecond: true},
 			},
 		},
-		"disk.time.#": {
-			Label: fmt.Sprintf("%s Disk Time (ms)", labelPrefix),
+		"time.#": {
+			Label: fmt.Sprintf("%s Time (ms)", labelPrefix),
 			Unit:  mp.UnitFloat,
 			Metrics: []Metrics{
 				{Name: "read", Label: "read", Diff: true},
