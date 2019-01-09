@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.0.3](https://github.com/y-kuno/mackerel-plugin-disk/releases/tag/v0.0.2...v0.0.3) (2019-01-09)
+
+* delete PerSecond option
+
 ## [v0.0.2](https://github.com/y-kuno/mackerel-plugin-disk/releases/tag/v0.0.1...v0.0.2) (2018-12-26)
 
 * modify GraphDefinition
