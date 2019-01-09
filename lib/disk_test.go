@@ -1,11 +1,9 @@
 package mpdisk
 
 import (
+	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
-	"time"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestGraphDefinition(t *testing.T) {
@@ -13,38 +11,6 @@ func TestGraphDefinition(t *testing.T) {
 
 	graphdef := p.GraphDefinition()
 	assert.EqualValues(t, len(graphdef), 2)
-}
-
-func TestCalcDiff(t *testing.T) {
-	var p DiskPlugin
-
-	val := 10.0
-	lastVal := 0.0
-	now := time.Now()
-	last := time.Unix(now.Unix()-10, 0)
-
-	diff, err := p.calcDiff(val, lastVal, now.Unix()-last.Unix(), false)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	assert.EqualValues(t, diff, 60)
-}
-
-func TestCalcDiffPerSecond(t *testing.T) {
-	var p DiskPlugin
-
-	val := 10.0
-	lastVal := 0.0
-	now := time.Now()
-	last := time.Unix(now.Unix()-10, 0)
-
-	diff, err := p.calcDiff(val, lastVal, now.Unix()-last.Unix(), true)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	assert.EqualValues(t, diff, 1)
 }
 
 func TestParseProcDiskstats(t *testing.T) {
@@ -100,4 +66,3 @@ func TestParseProcDiskstatsIncludeVirtual(t *testing.T) {
 	assert.EqualValues(t, stats["disk.time.vdb.io"], float64(464104))
 	assert.EqualValues(t, stats["disk.time.vdb.ioWeighted"], float64(46206065))
 }
-

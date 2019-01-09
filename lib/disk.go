@@ -2,49 +2,24 @@ package mpdisk
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
-	"math"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	mp "github.com/mackerelio/go-mackerel-plugin"
-	"github.com/mackerelio/golib/pluginutil"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var deviceNamePattern = regexp.MustCompile(`[^[[:alnum:]]_-]`)
 
-// Metrics represents definition of a metric
-type Metrics struct {
-	Name      string  `json:"name"`
-	Label     string  `json:"label"`
-	Diff      bool    `json:"-"`
-	Stacked   bool    `json:"stacked"`
-	Scale     float64 `json:"-"`
-	PerSecond bool    `json:"-"`
-}
-
-// Graphs represents definition of a graph
-type Graphs struct {
-	Label   string    `json:"label"`
-	Unit    string    `json:"unit"`
-	Metrics []Metrics `json:"metrics"`
-}
-
 // DiskPlugin is for mackerel-agent-plugins
 type DiskPlugin struct {
 	IncludeVirtualDisk bool
 	Prefix             string
-	Tempfile           string
-	writer             io.Writer
 }
 
 // MetricKeyPrefix is metrics prefix
@@ -56,21 +31,21 @@ func (p *DiskPlugin) MetricKeyPrefix() string {
 }
 
 // GraphDefinition interface for mackerel plugin
-func (p *DiskPlugin) GraphDefinition() map[string]Graphs {
+func (p *DiskPlugin) GraphDefinition() map[string]mp.Graphs {
 	labelPrefix := strings.Title(p.MetricKeyPrefix())
-	return map[string]Graphs{
+	return map[string]mp.Graphs{
 		"throughput.#": {
 			Label: fmt.Sprintf("%s Throughput", labelPrefix),
 			Unit:  mp.UnitBytesPerSecond,
-			Metrics: []Metrics{
-				{Name: "read", Label: "read", Diff: true, PerSecond: true},
-				{Name: "write", Label: "write", Diff: true, PerSecond: true},
+			Metrics: []mp.Metrics{
+				{Name: "read", Label: "read", Diff: true, Scale: 1/60},
+				{Name: "write", Label: "write", Diff: true, Scale: 1/60},
 			},
 		},
 		"time.#": {
 			Label: fmt.Sprintf("%s Time (ms)", labelPrefix),
 			Unit:  mp.UnitFloat,
-			Metrics: []Metrics{
+			Metrics: []mp.Metrics{
 				{Name: "read", Label: "read", Diff: true},
 				{Name: "write", Label: "write", Diff: true},
 				{Name: "io", Label: "io", Diff: true},
@@ -169,215 +144,6 @@ func (p *DiskPlugin) parseProcDiskstats(blocks map[string]bool, out io.Reader) (
 	return stats, nil
 }
 
-func (p *DiskPlugin) getWriter() io.Writer {
-	if p.writer == nil {
-		p.writer = os.Stdout
-	}
-	return p.writer
-}
-
-func (p *DiskPlugin) printValue(w io.Writer, key string, value float64, now time.Time) {
-	if math.IsNaN(value) || math.IsInf(value, 0) {
-		log.Printf("Invalid value: key = %s, value = %f\n", key, value)
-		return
-	}
-
-	if value == float64(int(value)) {
-		fmt.Fprintf(w, "%s\t%d\t%d\n", key, int(value), now.Unix())
-	} else {
-		fmt.Fprintf(w, "%s\t%f\t%d\n", key, value, now.Unix())
-	}
-}
-
-func (p *DiskPlugin) fetchLastValues() (map[string]float64, time.Time, error) {
-	lastTime := time.Now()
-
-	f, err := os.Open(p.tempfileName())
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, lastTime, nil
-		}
-		return nil, lastTime, err
-	}
-	defer f.Close()
-
-	stats := make(map[string]float64)
-	decoder := json.NewDecoder(f)
-	err = decoder.Decode(&stats)
-	lastTime = time.Unix(int64(stats["_lastTime"]), 0)
-	if err != nil {
-		return stats, lastTime, err
-	}
-	return stats, lastTime, nil
-}
-
-func (p *DiskPlugin) saveValues(values map[string]float64, now time.Time) error {
-	f, err := os.Create(p.tempfileName())
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	values["_lastTime"] = float64(now.Unix())
-	encoder := json.NewEncoder(f)
-	err = encoder.Encode(values)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (p *DiskPlugin) calcDiff(value float64, lastValue float64, diffTime int64, perSecond bool) (float64, error) {
-	if diffTime > 600 {
-		return 0, fmt.Errorf("too long duration")
-	}
-
-	var diff float64
-	if perSecond {
-		diff = (value - lastValue) / float64(diffTime)
-	} else {
-		diff = (value - lastValue) * 60 / float64(diffTime)
-	}
-
-	if diff < 0 {
-		return 0, fmt.Errorf("counter seems to be reset")
-	}
-	return diff, nil
-}
-
-func (p *DiskPlugin) tempfileName() string {
-	if p.Tempfile != "" {
-		return filepath.Join(pluginutil.PluginWorkDir(), p.Tempfile)
-	}
-	return filepath.Join(pluginutil.PluginWorkDir(), fmt.Sprintf("mackerel-plugin-%s", p.MetricKeyPrefix()))
-}
-
-// OutputValues output the metrics
-func (p *DiskPlugin) OutputValues() {
-	now := time.Now()
-	stat, err := p.FetchMetrics()
-	if err != nil {
-		log.Fatalln("OutputValues: ", err)
-	}
-
-	lastStat, lastTime, err := p.fetchLastValues()
-	if err != nil {
-		log.Println("fetchLastValues (ignore):", err)
-	}
-
-	for key, graph := range p.GraphDefinition() {
-		for _, metric := range graph.Metrics {
-			if strings.ContainsAny(key+metric.Name, "*#") {
-				p.formatValuesWithWildcard(key, metric, stat, lastStat, now, lastTime)
-			} else {
-				p.formatValues(key, metric, stat, lastStat, now, lastTime)
-			}
-		}
-	}
-
-	err = p.saveValues(stat, now)
-	if err != nil {
-		log.Fatalf("saveValues: %s", err)
-	}
-}
-
-func (p *DiskPlugin) formatValuesWithWildcard(prefix string, metric Metrics, stat map[string]float64, lastStat map[string]float64, now time.Time, lastTime time.Time) {
-	regexpStr := `\A` + prefix + "." + metric.Name
-	regexpStr = strings.Replace(regexpStr, ".", `\.`, -1)
-	regexpStr = strings.Replace(regexpStr, "*", `[-a-zA-Z0-9_]+`, -1)
-	regexpStr = strings.Replace(regexpStr, "#", `[-a-zA-Z0-9_]+`, -1)
-	re, err := regexp.Compile(regexpStr)
-	if err != nil {
-		log.Fatalln("Failed to compile regexp: ", err)
-	}
-	for k := range stat {
-		if re.MatchString(k) {
-			metricEach := metric
-			metricEach.Name = k
-			p.formatValues("", metricEach, stat, lastStat, now, lastTime)
-		}
-	}
-}
-
-func (p *DiskPlugin) formatValues(prefix string, metric Metrics, stat map[string]float64, lastStat map[string]float64, now time.Time, lastTime time.Time) {
-	name := metric.Name
-	value, ok := stat[name]
-	if !ok {
-		return
-	}
-	if metric.Diff {
-		lastValue, ok := lastStat[name]
-		if !ok {
-			log.Printf("%s does not exist at last fetch\n", metric.Name)
-			return
-		}
-
-		var err error
-		diffTime := now.Unix() - lastTime.Unix()
-		value, err = p.calcDiff(value, lastValue, diffTime, metric.PerSecond)
-		if err != nil {
-			log.Println("OutputValues: ", err)
-		}
-	}
-
-	if metric.Scale != 0 {
-		value *= metric.Scale
-	}
-
-	var metricNames []string
-	metricNames = append(metricNames, p.MetricKeyPrefix())
-	if prefix != "" {
-		metricNames = append(metricNames, prefix)
-	}
-	metricNames = append(metricNames, metric.Name)
-	p.printValue(p.getWriter(), strings.Join(metricNames, "."), value, now)
-}
-
-// GraphDef is graph definitions
-type GraphDef struct {
-	Graphs map[string]Graphs `json:"graphs"`
-}
-
-func title(s string) string {
-	r := strings.NewReplacer(".", " ", "_", " ", "*", "", "#", "")
-	return strings.TrimSpace(strings.Title(r.Replace(s)))
-}
-
-// OutputDefinitions outputs graph definitions
-func (p *DiskPlugin) OutputDefinitions() {
-	fmt.Fprintln(p.getWriter(), "# mackerel-agent-plugin")
-	graphs := make(map[string]Graphs)
-	for key, graph := range p.GraphDefinition() {
-		g := graph
-		k := key
-		prefix := p.MetricKeyPrefix()
-		if k == "" {
-			k = prefix
-		} else {
-			k = prefix + "." + k
-		}
-		if g.Label == "" {
-			g.Label = title(k)
-		}
-		var metrics []Metrics
-		for _, v := range g.Metrics {
-			if v.Label == "" {
-				v.Label = title(v.Name)
-			}
-			metrics = append(metrics, v)
-		}
-		g.Metrics = metrics
-		graphs[k] = g
-	}
-	var graphdef GraphDef
-	graphdef.Graphs = graphs
-	b, err := json.Marshal(graphdef)
-	if err != nil {
-		log.Fatalln("OutputDefinitions: ", err)
-	}
-	fmt.Fprintln(p.getWriter(), string(b))
-}
-
 // Do the plugin
 func Do() {
 	optIncludeVirtualDisk := kingpin.Flag("include-virtual-disk", "Include virtual disk").Default("false").Bool()
@@ -385,15 +151,10 @@ func Do() {
 	optTempfile := kingpin.Flag("tempfile", "Temp file name").String()
 	kingpin.Parse()
 
-	p := &DiskPlugin{
+	p := mp.NewMackerelPlugin(&DiskPlugin{
 		IncludeVirtualDisk: *optIncludeVirtualDisk,
 		Prefix:             *optPrefix,
-		Tempfile:           *optTempfile,
-	}
-
-	if os.Getenv("MACKEREL_AGENT_PLUGIN_META") != "" {
-		p.OutputDefinitions()
-	} else {
-		p.OutputValues()
-	}
+	})
+	p.Tempfile = *optTempfile
+	p.Run()
 }
