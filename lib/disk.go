@@ -38,8 +38,8 @@ func (p *DiskPlugin) GraphDefinition() map[string]mp.Graphs {
 			Label: fmt.Sprintf("%s Throughput", labelPrefix),
 			Unit:  mp.UnitBytesPerSecond,
 			Metrics: []mp.Metrics{
-				{Name: "read", Label: "read", Diff: true, Scale: 1/60},
-				{Name: "write", Label: "write", Diff: true, Scale: 1/60},
+				{Name: "read", Label: "read", Diff: true, Scale: 1/60.0},
+				{Name: "write", Label: "write", Diff: true, Scale: 1/60.0},
 			},
 		},
 		"time.#": {
