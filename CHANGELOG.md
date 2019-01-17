@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.0.5](https://github.com/y-kuno/mackerel-plugin-disk/compare/v0.0.4...v0.0.5) (2019-01-17)
+
+* bug fix: metrics key prefix
+
 ## [v0.0.4](https://github.com/y-kuno/mackerel-plugin-disk/compare/v0.0.3...v0.0.4) (2019-01-10)
 
 * bug fix: scale option
