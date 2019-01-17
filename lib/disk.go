@@ -133,13 +133,13 @@ func (p *DiskPlugin) parseProcDiskstats(blocks map[string]bool, out io.Reader) (
 
 		// throughput: 1 sector is fixed to 512 bytes in Linux system.
 		// See https://github.com/torvalds/linux/blob/b219a1d2de0c025318475e3bbf8e3215cf49d083/Documentation/block/stat.txt#L50-L56 for details.
-		stats[fmt.Sprintf("disk.throughput.%s.read", name)] = sectorRead * 512
-		stats[fmt.Sprintf("disk.throughput.%s.write", name)] = sectorWrite * 512
+		stats[fmt.Sprintf("throughput.%s.read", name)] = sectorRead * 512
+		stats[fmt.Sprintf("throughput.%s.write", name)] = sectorWrite * 512
 		// io time
-		stats[fmt.Sprintf("disk.time.%s.read", name)] = readTime
-		stats[fmt.Sprintf("disk.time.%s.write", name)] = writeTime
-		stats[fmt.Sprintf("disk.time.%s.io", name)] = ioTime
-		stats[fmt.Sprintf("disk.time.%s.ioWeighted", name)] = weightedTime
+		stats[fmt.Sprintf("time.%s.read", name)] = readTime
+		stats[fmt.Sprintf("time.%s.write", name)] = writeTime
+		stats[fmt.Sprintf("time.%s.io", name)] = ioTime
+		stats[fmt.Sprintf("time.%s.ioWeighted", name)] = weightedTime
 	}
 	return stats, nil
 }

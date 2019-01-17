@@ -59,10 +59,10 @@ func TestParseProcDiskstatsIncludeVirtual(t *testing.T) {
 	}
 
 	assert.EqualValues(t, len(stats), 30)
-	assert.EqualValues(t, stats["disk.throughput.vdb.read"], float64(34805026*512))
-	assert.EqualValues(t, stats["disk.throughput.vdb.write"], float64(57531600*512))
-	assert.EqualValues(t, stats["disk.time.vdb.read"], float64(10439061))
-	assert.EqualValues(t, stats["disk.time.vdb.write"], float64(35716520))
-	assert.EqualValues(t, stats["disk.time.vdb.io"], float64(464104))
-	assert.EqualValues(t, stats["disk.time.vdb.ioWeighted"], float64(46206065))
+	assert.EqualValues(t, stats["throughput.vdb.read"], float64(34805026*512))
+	assert.EqualValues(t, stats["throughput.vdb.write"], float64(57531600*512))
+	assert.EqualValues(t, stats["time.vdb.read"], float64(10439061))
+	assert.EqualValues(t, stats["time.vdb.write"], float64(35716520))
+	assert.EqualValues(t, stats["time.vdb.io"], float64(464104))
+	assert.EqualValues(t, stats["time.vdb.ioWeighted"], float64(46206065))
 }
